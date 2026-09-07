@@ -82,6 +82,7 @@ describe("Socket.IO multiplayer integration", () => {
     const room = server.rooms.requireRoom(hostAck.data.roomCode);
     const engine = room.engine!;
     const before = engine.getState();
+    const guestPlayedState = gameEvent(guest, "GAME_STATE_UPDATED");
     const playable = hostView.self.hand.find((card) => card.type !== "NUMBER" || card.value >= hostView.game.activeValue);
     const results = playable
       ? await Promise.all([
@@ -95,10 +96,14 @@ describe("Socket.IO multiplayer integration", () => {
     expect(results.filter((result) => result.ok)).toHaveLength(1);
     expect(results.filter((result) => !result.ok)).toHaveLength(1);
     expect(engine.getState()).not.toEqual(before);
+    await guestPlayedState;
 
+    const disconnectedState = gameEvent(guest, "GAME_STATE_UPDATED");
     host.disconnect();
+    expect((await disconnectedState).players.find((player) => player.playerId === hostAck.data.playerId)?.connected).toBe(false);
     const replacement = await connect(url);
     const restoredState = gameEvent(replacement, "GAME_STATE_UPDATED");
+    const guestReconnectedState = gameEvent(guest, "GAME_STATE_UPDATED");
     const reconnectAck = await waitFor<Ack<SessionCredentials>>((resolve) => replacement.emit("RECONNECT_PLAYER", {
       roomCode: hostAck.data.roomCode,
       sessionToken: hostAck.data.sessionToken,
@@ -107,5 +112,12 @@ describe("Socket.IO multiplayer integration", () => {
     const restored = await restoredState;
     expect(restored.self.playerId).toBe(hostAck.data.playerId);
     expect(restored.self.hand).toEqual(engine.getPlayerView(hostAck.data.playerId).self.hand);
+    const observer = await guestReconnectedState;
+    expect(observer.players.find((player) => player.playerId === hostAck.data.playerId)?.connected).toBe(true);
+    expect(JSON.stringify(observer)).not.toContain(hostAck.data.sessionToken);
+    const guestLeftState = gameEvent(guest, "GAME_STATE_UPDATED");
+    const leaveAck = await waitFor<Ack>((resolve) => replacement.emit("LEAVE_ROOM", {}, resolve));
+    expect(leaveAck.ok).toBe(true);
+    expect((await guestLeftState).players.find((player) => player.playerId === hostAck.data.playerId)?.connected).toBe(false);
   });
 });

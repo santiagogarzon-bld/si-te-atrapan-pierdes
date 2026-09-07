@@ -134,7 +134,7 @@ export function registerSocketHandlers(io: GameServer, rooms = new RoomManager()
           name: session.player.name,
         });
         emitRoom(io, rooms, session.room);
-        if (session.room.engine) socket.emit("GAME_STATE_UPDATED", session.room.engine.getPlayerView(session.player.playerId));
+        emitGame(io, session.room);
         ack(success(session.credentials));
       } catch (error) {
         const clientError = toClientError(error);
@@ -240,7 +240,10 @@ export function registerSocketHandlers(io: GameServer, rooms = new RoomManager()
         socket.data = {};
         await socket.leave(room.code);
         socket.to(room.code).emit("PLAYER_LEFT", { playerId, name: result.player.name });
-        if (result.room) emitRoom(io, rooms, result.room);
+        if (result.room) {
+          emitRoom(io, rooms, result.room);
+          emitGame(io, result.room);
+        }
         ack({ ok: true });
       } catch (error) {
         const clientError = toClientError(error);

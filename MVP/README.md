@@ -1,8 +1,10 @@
-# La Trampa — MVP multijugador
+# La Trampa — multijugador 3D
 
 Juego web de cartas competitivo para 2 a 6 personas. El servidor es la única autoridad sobre turnos, cartas, trampas, acusaciones y victoria; el navegador solo solicita acciones y representa la vista privada que recibe.
 
-## Estado del MVP
+## Experiencia 3D
+
+Mesa 3D interactiva construida en Three.js con un diorama de bosque, seis personajes cartoon, iluminación cálida, sombras, animación de respiración y parpadeo, cartas que vuelan desde el jugador hasta la pila y un indicador de turno. Los modelos y texturas de cartas se generan localmente con geometría y canvas; no necesitan servicios de assets.
 
 Incluye salas con código de seis caracteres, lobby y host, partida en tiempo real, reconexión mediante token secreto, cartas numéricas y comodines A/B, toma de pila, zona de trampa, acusaciones, eliminación, condiciones de victoria, historial público, interfaz responsive y contenedores Docker.
 
@@ -11,8 +13,9 @@ Los estados están en memoria. Reiniciar el backend elimina las salas activas; `
 ## Arquitectura
 
 ```text
-client/                    React + Vite + Zustand + Socket.IO Client
+client/                    React + Vite + Three.js + Zustand + Socket.IO Client
   src/components/         Cartas, jugadores, modal y registro
+  src/components/scene/   Diorama 3D, cámara y animaciones del estado público
   src/pages/              Inicio, lobby y partida
   src/store.ts             Estado del cliente y reconexión
 src/
@@ -60,7 +63,20 @@ cp .env.example .env
 npm run dev
 ```
 
-Abre `http://localhost:5173`. Para probar multijugador, usa otra ventana o navegador y entra con el código mostrado por el host.
+Abre `http://localhost:5173`. Para probar multijugador, usa otro navegador o una ventana de incógnito y entra con el código mostrado por el anfitrión. Las pestañas del mismo perfil comparten identidad.
+
+Para jugar desde un teléfono u otro equipo en la misma red, abre `http://IP-DEL-EQUIPO:5173`. Vite redirige `/socket.io` al backend, por lo que no debes configurar `localhost` en el teléfono. Ambos procesos deben estar activos y el puerto 5173 debe ser accesible en tu red.
+
+### Controles
+
+- Arrastra la escena para girar la cámara; el botón de flecha circular recupera la vista inicial.
+- Selecciona una carta de tu mano y pulsa **Jugar carta**. Las cartas bloqueadas se muestran atenuadas.
+- Abre **Zona secreta**, selecciona una carta de la mano y una secreta y confirma el intercambio.
+- Si no puedes jugar, aparece **Recoger pila**. Puedes acusar desde la lista de jugadores.
+- El botón de sonido activa señales de jugada. El botón de destello reduce el movimiento; respeta inicialmente la preferencia del sistema.
+- **Cómo jugar** explica las reglas. Los diálogos se pueden cerrar con Escape y mantienen el foco del teclado.
+
+La vista 3D necesita WebGL 2. Si no está disponible, aparece un aviso y los controles de la partida siguen siendo utilizables.
 
 Variables del backend:
 
@@ -69,19 +85,39 @@ PORT=3000
 CLIENT_ORIGIN=http://localhost:5173
 ```
 
-Variable del frontend:
+Variable opcional del frontend (vacía usa el mismo origen y el proxy; configura una URL solo si alojas el backend por separado):
 
 ```text
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=
 ```
 
 ## Docker
 
+Desde la carpeta `MVP`:
+
 ```bash
-docker compose up --build
+docker compose up -d --build --wait
+docker compose ps
 ```
 
-La interfaz queda disponible en `http://localhost:8080` y el backend en `http://localhost:3000`. El endpoint `GET /health` responde `{ "ok": true }`.
+Abre `http://localhost:8080`, o `http://IP-DEL-EQUIPO:8080` desde otro dispositivo en la misma red. Nginx sirve la versión 3D y redirige Socket.IO al backend por la red interna de Docker. Solo se publica el puerto del frontend; no hace falta abrir el puerto 3000.
+
+El frontend espera a que el backend esté saludable. Ambos contenedores tienen comprobaciones de salud y reinicio automático. `GET /healthz` comprueba Nginx y `GET /health` comprueba el backend a través del proxy. Las imágenes se construyen en varias etapas; el backend ejecuta únicamente dependencias de producción como usuario `node`, y el frontend final contiene Nginx y los archivos compilados.
+
+Para cambiar el puerto externo:
+
+```bash
+FRONTEND_PORT=8090 docker compose up -d --build --wait
+```
+
+`FRONTEND_PORT` también se puede definir en `MVP/.env`. Compose deja `VITE_API_URL` vacío durante la compilación para que cada navegador use la dirección con la que abrió el juego. Los archivos `.env`, `node_modules` y las compilaciones locales se excluyen de los contextos de construcción.
+
+```bash
+docker compose logs -f
+docker compose down
+```
+
+Las salas siguen almacenadas en memoria: reiniciar o recrear el backend elimina las partidas activas.
 
 ## Verificación
 

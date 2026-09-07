@@ -5,3 +5,11 @@ client/dist
 coverage
 .git
 .env
+.env.*
+!*.env.example
+*.log
+*.tsbuildinfo
+# The frontend has its own build context.
+client
+tests
+deploy

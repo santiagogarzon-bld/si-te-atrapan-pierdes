@@ -90,6 +90,12 @@ export class GameEngine {
     return getPlayerView(this.state, viewerPlayerId);
   }
 
+  setPlayerConnected(playerId: string, connected: boolean): void {
+    const player = this.state.players.find((candidate) => candidate.id === playerId);
+    if (!player) throw new GameError("PLAYER_NOT_FOUND", "Player does not belong to this game.");
+    player.connected = connected;
+  }
+
   startGame(requestingPlayerId: string): void {
     if (this.state.status !== "WAITING") {
       throw new GameError("GAME_ALREADY_STARTED", "This game cannot be started again.");

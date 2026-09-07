@@ -1,16 +1,32 @@
 {
-  "name": "cheat-cards-game-engine",
+  "name": "cheat-cards-mvp",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "dev:client": "npm --prefix client run dev",
+    "build": "tsc -p tsconfig.build.json",
+    "build:client": "npm --prefix client run build",
+    "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test && npm run build && npm run build:client"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "@types/node": "^24.3.0",
+    "socket.io-client": "^4.8.1",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }

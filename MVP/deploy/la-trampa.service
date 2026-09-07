@@ -1,0 +1,23 @@
+[Unit]
+Description=La Trampa realtime game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/la-trampa
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=CLIENT_ORIGIN=https://18.204.126.52
+ExecStart=/usr/bin/node /opt/la-trampa/dist/server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
